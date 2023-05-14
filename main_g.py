@@ -6,8 +6,8 @@ import random
 grammar = nltk.CFG.fromstring("""
     S -> NP VP
     NP -> Det N | N | PropN | Adj NP | NP PP
-    VP -> V | Vbar NP | Vbar NP PP | Adv VP | VP Adv | VP Conj VP | V AdvP
-    Vbar -> V
+    VP -> Vi | Vt  | Vbar NP | Vbar NP PP | Adv VP | VP Adv | VP Conj VP | V AdvP
+    Vbar -> Vi | Vt
     AdvP -> Adv P
     PP -> P NP
     Det -> 'a' | 'an' | 'the' | 'every'| 'some' | 'any'
@@ -18,7 +18,8 @@ grammar = nltk.CFG.fromstring("""
     N -> 'boy' | 'student' | 'girl' | 'class' | 'book' | 'teacher'
     PropN -> 'john' | 'mary'
     Adj -> 'eager' | 'smart'
-    V -> 'walks' | 'passed' | 'sees' | 'studies' | 'teaches' | 'saw' 
+    Vi -> 'walks' | 'passed' 
+    Vt -> 'sees' | 'teaches'
     Adv -> 'eagerly' | 'well'
     
 """)
@@ -78,6 +79,7 @@ print('\n')
 #  whether it is a transitive or intransitive verb (i.e., depending on the presence/absence of a Vbar node).
 
 def get_verb_tuple(tree):
+    pass
 
 #Define a function that takes a position in the parse tree (i.e., a tuple like (0, 1, 1)) and returns the 
 # position of the parent node ((0, 1) in this case), or None if it has no parent.
@@ -88,3 +90,22 @@ def get_parent_node(child_tuple):
     else: 
         return None
 
+#Define a function that takes a parse tree, and returns the position of the subject DP.
+def get_position_subj (tree):
+    pass
+
+#Define a function that takes a parse tree, and returns the position of the object DP if one exists, and None otherwise
+def get_position_obj (tree):
+    if  'Vt' in parse_tree.subtrees()[0]: 
+        obj =  parse_tree.subtres()[1,1,1]
+        return obj
+    else: 
+        None 
+
+sentence = sentences[0]
+parser = nltk.parse.BottomUpLeftCornerChartParser(grammar)                                  
+tokens = sentence.lower().split()
+parse_trees = parser.parse(tokens)
+if parse_tree in parse_trees:  
+    print(parse_tree)
+    print(get_position_obj(parse_tree))
