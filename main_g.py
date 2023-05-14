@@ -57,12 +57,25 @@ parse_trees = parser.parse(tokens)
 for parse_tree in parse_trees:
     parse_tree.pretty_print()
 print(parse_tree[0,0])
+print('\n' )
 
 #practice iterating
-# for subtree in parse_tree.subtrees(): 
-#     print(subtree)
-# for pos in parse_tree.treepositions(): ...
-# for pos in treepositions(order="leaves"): ...
-# for pos in treepositions(order="postorder")
+for subtree in parse_tree.subtrees(): 
+    print(subtree)
+print('\n' )
+for pos in parse_tree.treepositions(): 
+    print(pos)
+print('\n')
+for pos in parse_tree.treepositions(order="leaves"):
+    print(pos)
+print('\n')
+for pos in parse_tree.treepositions(order="postorder"):
+  print(pos)
+print('\n')
 
+# Define a function that takes a parse tree, and returns the position of the verb (i.e., a tuple).
+#  If your grammar follows the textbook closely, then the position of the verb will depend on
+#  whether it is a transitive or intransitive verb (i.e., depending on the presence/absence of a Vbar node).
+
+def get_verb_tuple(tree):
 
