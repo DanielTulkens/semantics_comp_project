@@ -1,9 +1,7 @@
-# %%
 import nltk
 import sys 
 import random
 
-# %%
 grammar = nltk.CFG.fromstring("""
     S -> NP VP
     NP -> Det N | N | PropN | Adj NP | NP PP
@@ -24,11 +22,9 @@ grammar = nltk.CFG.fromstring("""
     
 """)
 
-# %%
 sentences = [ 'John sees Mary', 'A student walks', 'Some girl sees every boy','Every eager student passed']
 
 
-# %%
 sentence = random.choice(sentences)
 parser = nltk.parse.RecursiveDescentParser(grammar)                            
 tokens = sentence.lower().split()
@@ -38,10 +34,6 @@ if not parse_trees:
 for parse_tree in parse_trees:
     print(parse_tree)
 
-# %% [markdown]
-# assignment 2
-
-# %%
 #pretty_print
 sentence = random.choice(sentences)
 parser = nltk.parse.RecursiveDescentParser(grammar)                            
@@ -52,13 +44,11 @@ if not parse_trees:
 for parse_tree in parse_trees:
     parse_tree.pretty_print()
 
-# %%
 #select the verb 
 for position in parse_trees.treepositions():
         if parse_trees[position].label() == "V":
             if parse_trees[position + (0,)].label() == "Vbar":
                 position += (0,)
-                break 
             else:
                 break 
 
