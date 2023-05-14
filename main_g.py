@@ -79,6 +79,7 @@ print('\n')
 #  whether it is a transitive or intransitive verb (i.e., depending on the presence/absence of a Vbar node).
 
 def get_verb_tuple(tree):
+    # test
     pass
 
 #Define a function that takes a position in the parse tree (i.e., a tuple like (0, 1, 1)) and returns the 
