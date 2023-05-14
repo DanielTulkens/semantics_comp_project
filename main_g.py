@@ -79,3 +79,8 @@ print('\n')
 
 def get_verb_tuple(tree):
 
+#Define a function that takes a position in the parse tree (i.e., a tuple like (0, 1, 1)) and returns the 
+# position of the parent node ((0, 1) in this case), or None if it has no parent.
+def get_parent_node(child_tuple): 
+    parent_node = child_tuple[:-1]
+    return parent_node
