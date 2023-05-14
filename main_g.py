@@ -45,11 +45,6 @@ for parse_tree in parse_trees:
     parse_tree.pretty_print()
 
 #select the verb 
-for position in parse_trees.treepositions():
-        if parse_trees[position].label() == "V":
-            if parse_trees[position + (0,)].label() == "Vbar":
-                position += (0,)
-            else:
-                break 
+
 
 
