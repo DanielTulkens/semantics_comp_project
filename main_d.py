@@ -51,7 +51,6 @@ def print_sentence_data(sentence):
         return
     parse_tree.pretty_print()
     print(parse_tree.treepositions())
-    select_verb(parse_tree)
 
 
 for s in sentences:

@@ -1,0 +1,128 @@
+import nltk
+from nltk.tree import Tree
+import sys 
+import random
+
+grammar = nltk.CFG.fromstring("""
+    S -> NP VP
+    NP -> Det Nom | PropN
+    Nom -> N  | Adj Nom | Nom PP
+    VP -> Vi | Vt  | Vbar NP | Vbar NP PP | Adv VP | VP Adv | VP Conj VP | V AdvP
+    Vbar -> Vi | Vt
+    AdvP -> Adv P
+    PP -> P NP
+    Det -> 'a' | 'an' | 'the' | 'every'| 'some' | 'any'
+    P -> 'with' | 'in' | 'on' | 'to' | 'without' | 'from'
+    Conj -> 'and' | 'or' | 'but'
+
+
+    N -> 'boy' | 'student' | 'girl' | 'class' | 'book' | 'teacher'
+    PropN -> 'john' | 'mary'
+    Adj -> 'eager' | 'smart'
+    Vi -> 'walks' | 'passed' 
+    Vt -> 'sees' | 'teaches'
+    Adv -> 'eagerly' | 'well'
+    
+""")
+
+parser = nltk.parse.BottomUpLeftCornerChartParser(grammar)
+
+sentences = ['John sees Mary',
+             'A student walks',
+             'Some girl sees every boy',
+             'Every eager student passed'
+             ]
+
+
+def create_parse_tree(sentence):
+    tokens = sentence.lower().split()
+    parse_trees = parser.parse(tokens)
+    if not parse_trees:
+        return
+    for parse_tree in parse_trees:
+        return parse_tree
+
+
+trees = [create_parse_tree(sentence) for sentence in sentences]
+
+# select the verb for the sentence 'john sees mary'
+print(trees[0][1, 0])
+# select the subject for the sentence 'john sees mary'
+print(trees[0][0])
+# select the determiner for sentence 'A student walks'
+print(trees[1][0, 0])
+print('\n')
+
+# practice iterating
+for subtree in trees[2].subtrees():
+    print(subtree)
+print('\n')
+for pos in trees[2].treepositions():
+    print(pos)
+print('\n')
+for pos in trees[2].treepositions(order="leaves"):
+    print(pos)
+print('\n')
+for pos in trees[2].treepositions(order="postorder"):
+    print(pos)
+print('\n')
+
+
+# Define a function that takes a position in the parse tree (i.e., a tuple like (0, 1, 1))
+# and returns the position of the parent node ((0, 1) in this case), or None if it has no parent.
+def get_parent_node(child_tuple):
+    if len(child_tuple) >= 1:
+        parent_node = child_tuple[:-1]
+        return parent_node
+    else:
+        return None
+
+
+# Define a function that takes a parse tree, and returns the position of the verb (i.e., a tuple).
+# If your grammar follows the textbook closely, then the position of the verb will depend on
+# whether it is a transitive or intransitive verb (i.e., depending on the presence/absence of a Vbar node).
+def get_verb_pos(tree):
+    for node in tree.treepositions(order="leaves"):
+        if tree[get_parent_node(node)].label() in ["Vi", "Vt"]:
+            return node
+
+
+# Define a function that takes a parse tree, and returns the position of the subject DP.
+def get_subject_pos(tree):
+    VP_pos = (-1,)
+    for node in tree.treepositions(order="preorder"):
+        if isinstance(tree[node], nltk.Tree):  # Check if node has children
+            if tree[node].label() == "VP":
+                VP_pos = node
+            if node[:len(VP_pos)] != VP_pos and tree[node].label() == "DP":
+                return node
+
+
+# Define a function that takes a parse tree, and returns the position of the object DP
+# if one exists, and None otherwise
+def get_object_pos(tree):
+    VP_pos = (-1,)
+    for node in tree.treepositions(order="preorder"):
+        if isinstance(tree[node], nltk.Tree):  # Check if node has children
+            if tree[node].label() == "VP":
+                VP_pos = node
+            if node[:len(VP_pos)] == VP_pos and tree[node].label() == "DP":
+                return node
+
+
+# Define a function that returns a list of positions in the tree, corresponding to all quantificational DPs
+# (i.e., the constituents that might undergo quantifier raising, which will be implemented later).
+def get_quantificational_DPs(tree):
+    pass
+
+
+def print_tree_data(tree):
+    tree.pretty_print()
+    print('verb position: ', get_verb_pos(tree))
+    print('subject position: ', get_subject_pos(tree))
+    print('object position: ', get_object_pos(tree))
+    print('quantificational DPs: ', get_quantificational_DPs(tree))
+
+
+for t in trees:
+    print_tree_data(t)
