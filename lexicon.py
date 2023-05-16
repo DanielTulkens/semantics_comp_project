@@ -42,6 +42,11 @@ vocabulary = {
         'every',
         'some',
         'any'
+    ),
+    'Conj': (
+        'and',
+        'or',
+        'but'
     )
 }
 
@@ -62,6 +67,8 @@ def generate_lexicon(vocab, translations):
     for part_of_speech, entries in vocab.items():
         if part_of_speech in translations.keys():
             lexicon.update({part_of_speech: {word: translations[part_of_speech](word) for word in entries}})
+        else:
+            lexicon.update({part_of_speech: {word: word for word in entries}})
     return lexicon
 
 
@@ -69,7 +76,7 @@ def lexicon_to_terminals(lexicon):
     terminal_rules = ''
     for part_of_speech in lexicon.keys():
         terminals_string = " | ".join(["'" + word + "'" for word in lexicon[part_of_speech].keys()])
-        terminal_rules += (part_of_speech + ' -> ' + terminals_string + '\n')
+        terminal_rules += (part_of_speech + ' -> ' + terminals_string + '\n\t')
     return terminal_rules
 
 
@@ -92,7 +99,7 @@ extensional_lexicon.update(
 
 terminals_entries = lexicon_to_terminals(extensional_lexicon)
 
-grammar = f"""
+extensional_grammar = f"""
     S -> NP VP
     NP -> Det Nom | PropN
     Nom -> N  | Adj Nom | Nom PP
@@ -101,9 +108,5 @@ grammar = f"""
     AdvP -> Adv P
     PP -> P NP
     
-    P -> 'with' | 'in' | 'on' | 'to' | 'without' | 'from'
-    Conj -> 'and' | 'or' | 'but'
     {terminals_entries}
-    Adv -> 'eagerly' | 'well'
-    
 """

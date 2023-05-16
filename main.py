@@ -3,27 +3,9 @@ from nltk.tree import Tree
 import sys 
 import random
 
-grammar = nltk.CFG.fromstring("""
-    S -> NP VP
-    NP -> Det Nom | PropN
-    Nom -> N  | Adj Nom | Nom PP
-    VP -> Vi | Vt  | Vbar NP | Vbar NP PP | Adv VP | VP Adv | VP Conj VP | V AdvP
-    Vbar -> Vi | Vt
-    AdvP -> Adv P
-    PP -> P NP
-    Det -> 'a' | 'an' | 'the' | 'every'| 'some' | 'any'
-    P -> 'with' | 'in' | 'on' | 'to' | 'without' | 'from'
-    Conj -> 'and' | 'or' | 'but'
+import lexicon
 
-
-    N -> 'boy' | 'student' | 'girl' | 'class' | 'book' | 'teacher'
-    PropN -> 'john' | 'mary'
-    Adj -> 'eager' | 'smart'
-    Vi -> 'walks' | 'passed' 
-    Vt -> 'sees' | 'teaches'
-    Adv -> 'eagerly' | 'well'
-    
-""")
+grammar = nltk.CFG.fromstring(lexicon.extensional_grammar)
 
 parser = nltk.parse.BottomUpLeftCornerChartParser(grammar)
 
