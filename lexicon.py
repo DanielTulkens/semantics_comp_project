@@ -58,8 +58,25 @@ formalizations = {
     'N': lambda noun: lambda x: f'{noun}({x})',
     'Vi': lambda verb: lambda x: f'{verb}({x})',
     'Vt': lambda verb: lambda y: lambda x: f'{verb}({x}, {y})',
-    'Adj': lambda adjective: lambda P: lambda x: f'{adjective}({x}) ^ {P(x)}'
+    'Adj': lambda adjective: lambda P: lambda x: f'{adjective}({x}) ^ {P(x)}',
+    'Adv': lambda adverb: lambda P: lambda x: f'{adverb}({P(x)})'
 }
+
+
+class Formalization:
+    def __init__(self, formula, type_hint):
+        self.formula = formula
+        self.type = type_hint
+        if type(type_hint) == tuple:
+            self.selected = type_hint[0]
+            self.returned = type_hint[1]
+        else:
+            self.selected = None
+
+    def application(self, argument):
+        if argument.type == self.selected:
+            resulting_formula = self.formula(argument.formula)
+            return Formalization(resulting_formula, self.returned)
 
 
 def generate_lexicon(vocab, translations):
