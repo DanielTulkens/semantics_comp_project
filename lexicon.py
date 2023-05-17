@@ -63,6 +63,7 @@ formalizations = {
 }
 
 
+# this class would create an object storing both the representation of an element, and its typing information
 class Formalization:
     def __init__(self, formula, type_hint):
         self.formula = formula
