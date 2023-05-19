@@ -5,6 +5,7 @@ import random
 
 import lexicon
 
+formalizations = lexicon.extensional_lexicon
 grammar = nltk.CFG.fromstring(lexicon.extensional_grammar)
 
 parser = nltk.parse.BottomUpLeftCornerChartParser(grammar)
@@ -108,3 +109,45 @@ def print_tree_data(tree):
 
 for t in trees:
     print_tree_data(t)
+
+# assignment 6
+existentials = ['a', 'some', 'an']
+universal = ['every']
+
+
+def translate_to_logic(tree=nltk.Tree):
+    result = {}
+    prev_was_leave = False
+    leaf = ''
+    root_cause = None
+    for node in tree.treepositions(order='postorder'):
+        if isinstance(tree[node], nltk.Tree):
+            if len(tree[node]) > 1:
+                if tree[node].label() == 'S':
+                    if result[node + (1,)].t == 'existential':
+                        result[node] = result[node + (0,)].application(result[node + (1,)])
+                    else:
+                        result[node] = result[node + (1,)].application(result[node + (0,)])
+                else:
+                    result[node] = result[node + (0,)].application(result[node + (1,)])
+            else:
+                if prev_was_leave:
+                    if leaf in existentials:
+                        applier = 'existential'
+                    elif leaf in universal:
+                        applier = 'universal'
+                    else:
+                        applier = tree[node].label()
+                    result[node] = formalizations[applier][leaf]
+                    root_cause = result[node]
+                    prev_was_leave = False
+                else:
+                    result[node] = root_cause
+        else:
+            prev_was_leave = True
+            leaf = tree[node]
+    return result
+
+
+res = translate_to_logic(create_parse_tree(sentences[0]))
+res[()].formula
