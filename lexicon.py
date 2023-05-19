@@ -35,31 +35,22 @@ vocabulary = {
         'eagerly',
         'well'
     ),
-    'Det': (
-        'a',
-        'an',
-        'the',
-        'every',
-        'some',
-        'any'
-    ),
+    'Det': {
+        'existential': (
+            'a',
+            'an',
+            'the',
+            'some'),
+        'universal': (
+            'every',
+            'any'
+        )
+    },
     'Conj': (
         'and',
         'or',
         'but'
     )
-}
-
-
-# this dictionary contains functions to generate lexical entries for different parts of speech.
-# items denoting entities or truth values are represented as strings, other elements as anonymous functions
-formalizations = {
-    'PropN': lambda name: name,
-    'N': lambda noun: lambda x: f'{noun}({x})',
-    'Vi': lambda verb: lambda x: f'{verb}({x})',
-    'Vt': lambda verb: lambda y: lambda x: f'{verb}({x}, {y})',
-    'Adj': lambda adjective: lambda P: lambda x: f'{adjective}({x}) ^ {P(x)}',
-    'Adv': lambda adverb: lambda P: lambda x: f'{adverb}({P(x)})'
 }
 
 
@@ -80,13 +71,58 @@ class Formalization:
             return Formalization(resulting_formula, self.returned)
 
 
+# this dictionary contains functions to generate lexical entries for different parts of speech.
+formalizations = {
+    'PropN': lambda name: Formalization(
+        name,
+        'e'
+    ),
+    'N': lambda noun: Formalization(
+        lambda x: f'{noun.upper()}({x})',
+        ('e', 't')
+    ),
+    'Vi': lambda verb: Formalization(
+        lambda x: f'{verb.upper()}({x})',
+        ('e', 't')
+    ),
+    'Vt': lambda verb: Formalization(
+        lambda y: lambda x: f'{verb.upper()}({x}, {y})',
+        ('e', ('e', 't'))
+    ),
+    'Adj': lambda adjective: Formalization(
+        lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
+        (('e', 't'), ('e', 't'))
+    ),
+    'Adv': lambda adverb: Formalization(
+        lambda P: lambda x: f'{adverb.upper()}({P(x)})',
+        (('e', 't'), ('e', 't'))
+    ),
+    'P': lambda preposition: Formalization(
+        lambda x: lambda y: f'{preposition.upper()}({x}, {y})',
+        ('e', ('e', 't'))
+    ),
+    'existential': lambda _: Formalization(
+        lambda P: lambda Q: f'Exists x[{P("x")} ^ {Q("x")}]',
+        (('e', 't'), (('e', 't'), 't'))
+    ),
+    'universal': lambda _: Formalization(
+        lambda P: lambda Q: f'All x[{P("x")} -> {Q("x")}]',
+        (('e', 't'), (('e', 't'), 't'))
+    )
+}
+
+
 def generate_lexicon(vocab, translations):
     lexicon = {}
     for part_of_speech, entries in vocab.items():
         if part_of_speech in translations.keys():
             lexicon.update({part_of_speech: {word: translations[part_of_speech](word) for word in entries}})
+        elif type(entries) == dict:
+            lexicon[part_of_speech] = {}
+            for subtype, words in entries.items():
+                lexicon[part_of_speech].update({word: translations[subtype](word) for word in words})
         else:
-            lexicon.update({part_of_speech: {word: word for word in entries}})
+            lexicon.update({part_of_speech: {word: Formalization(word, 'e') for word in entries}})
     return lexicon
 
 
@@ -99,21 +135,6 @@ def lexicon_to_terminals(lexicon):
 
 
 extensional_lexicon = generate_lexicon(vocabulary, formalizations)
-
-existential_quantifier = lambda P: lambda Q: f'Exists x[{P("x")} ^ {Q("x")}]'
-universal_quantifier = lambda P: lambda Q: f'All x[{P("x")} -> {Q("x")}]'
-definite_description = lambda P: lambda Q: f'Exists! x[{P("x")} ^ {Q("x")}]'
-
-extensional_lexicon.update(
-    {'Det': {
-        'a': existential_quantifier,
-        'an': existential_quantifier,
-        'the': definite_description,
-        'every': universal_quantifier,
-        'some': existential_quantifier,
-        'any': universal_quantifier,
-    }}
-)
 
 terminals_entries = lexicon_to_terminals(extensional_lexicon)
 
@@ -128,3 +149,7 @@ extensional_grammar = f"""
     
     {terminals_entries}
 """
+
+# # for testing purposes
+# print(extensional_lexicon)
+# print(extensional_grammar)
