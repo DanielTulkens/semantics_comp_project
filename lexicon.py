@@ -71,6 +71,14 @@ class Formalization:
             resulting_formula = self.formula(argument.formula)
             return Formalization(resulting_formula, self.returned)
 
+    def remove_traces(self, trace):
+        split_formula = self.formula.split(trace)
+        new_formula = lambda x: f'{x}'.join(split_formula)
+        return Formalization(
+            new_formula,
+            ('e', self.type)
+        )
+
 
 # this dictionary contains functions to generate lexical entries for different parts of speech.
 formalizations = {
