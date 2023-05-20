@@ -56,9 +56,10 @@ vocabulary = {
 
 # this class would create an object storing both the representation of an element, and its typing information
 class Formalization:
-    def __init__(self, formula, type_hint):
+    def __init__(self, formula, type_hint, type_=None):
         self.formula = formula
         self.type = type_hint
+        self.t = type_
         if type(type_hint) == tuple:
             self.selected = type_hint[0]
             self.returned = type_hint[1]
@@ -75,39 +76,48 @@ class Formalization:
 formalizations = {
     'PropN': lambda name: Formalization(
         name,
-        'e'
+        'e',
+        'PropN'
     ),
     'N': lambda noun: Formalization(
         lambda x: f'{noun.upper()}({x})',
-        ('e', 't')
+        ('e', 't'),
+        'N'
     ),
     'Vi': lambda verb: Formalization(
         lambda x: f'{verb.upper()}({x})',
-        ('e', 't')
+        ('e', 't'),
+        'Vi'
     ),
     'Vt': lambda verb: Formalization(
         lambda y: lambda x: f'{verb.upper()}({x}, {y})',
-        ('e', ('e', 't'))
+        ('e', ('e', 't')),
+        'Vt'
     ),
     'Adj': lambda adjective: Formalization(
         lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
-        (('e', 't'), ('e', 't'))
+        (('e', 't'), ('e', 't')),
+        'Adj'
     ),
     'Adv': lambda adverb: Formalization(
         lambda P: lambda x: f'{adverb.upper()}({P(x)})',
-        (('e', 't'), ('e', 't'))
+        (('e', 't'), ('e', 't')),
+        'Adv'
     ),
     'P': lambda preposition: Formalization(
         lambda x: lambda y: f'{preposition.upper()}({x}, {y})',
-        ('e', ('e', 't'))
+        ('e', ('e', 't')),
+        'P'
     ),
     'existential': lambda _: Formalization(
         lambda P: lambda Q: f'Exists x[{P("x")} ^ {Q("x")}]',
-        (('e', 't'), (('e', 't'), 't'))
+        (('e', 't'), (('e', 't'), 't')),
+        'existential'
     ),
     'universal': lambda _: Formalization(
         lambda P: lambda Q: f'All x[{P("x")} -> {Q("x")}]',
-        (('e', 't'), (('e', 't'), 't'))
+        (('e', 't'), (('e', 't'), 't')),
+        'universal'
     )
 }
 
