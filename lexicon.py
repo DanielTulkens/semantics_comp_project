@@ -1,3 +1,5 @@
+import re
+
 vocabulary = {
     'P': (
         'with',
@@ -54,12 +56,37 @@ vocabulary = {
 }
 
 
+def combine_function_strings(f1, f2):
+    var_to_swap = f1[8]
+    full_function = f1[11:-1].replace(f'_{var_to_swap}_', f2)
+    # print('full', full_function)
+    while True:
+        stuff_to_simplify = re.search(r'<[^<>]*>\([^()]*\)', full_function)
+        if stuff_to_simplify:
+            stuff_to_simplify = stuff_to_simplify[0]
+            # print('to simplify', stuff_to_simplify)
+            function_part = re.search(r'<[^<>]*>\(', stuff_to_simplify)[0][:-1]
+            # print('fun', function_part)
+            argument_part = stuff_to_simplify.split(function_part)[-1][1:-1]
+            # print('arg', argument_part)
+            replacement = combine_function_strings(
+                function_part,
+                argument_part
+            )
+            full_function = full_function.replace(stuff_to_simplify, replacement)
+        else:
+            break
+    # print('simplified', full_function)
+    return full_function
+
+
 # this class would create an object storing both the representation of an element, and its typing information
 class Formalization:
-    def __init__(self, formula, type_hint, type_=None):
+    def __init__(self, formula, type_hint, type_=None, formula_string=''):
         self.formula = formula
         self.type = type_hint
         self.t = type_
+        self.string = formula_string
         if type(type_hint) == tuple:
             self.selected = type_hint[0]
             self.returned = type_hint[1]
@@ -69,14 +96,21 @@ class Formalization:
     def application(self, argument):
         if argument.type == self.selected:
             resulting_formula = self.formula(argument.formula)
-            return Formalization(resulting_formula, self.returned)
+            resulting_string = combine_function_strings(self.string, argument.string)
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=self.returned,
+                formula_string=resulting_string)
 
     def remove_traces(self, trace):
         split_formula = self.formula.split(trace)
         new_formula = lambda x: f'{x}'.join(split_formula)
+        split_string = self.string.split(trace)
+        new_string = '<lambda x:' + 'x'.join(split_string) + '>'
         return Formalization(
-            new_formula,
-            ('e', self.type)
+            formula=new_formula,
+            type_hint=('e', self.type),
+            formula_string=new_string
         )
 
 
@@ -85,47 +119,56 @@ formalizations = {
     'PropN': lambda name: Formalization(
         name,
         'e',
-        'PropN'
+        'PropN',
+        name
     ),
     'N': lambda noun: Formalization(
         lambda x: f'{noun.upper()}({x})',
         ('e', 't'),
-        'N'
+        'N',
+        f'<lambda x: {noun.upper()}(_x_)>'
     ),
     'Vi': lambda verb: Formalization(
         lambda x: f'{verb.upper()}({x})',
         ('e', 't'),
-        'Vi'
+        'Vi',
+        f'<lambda x: {verb.upper()}(_x_)>'
     ),
     'Vt': lambda verb: Formalization(
         lambda y: lambda x: f'{verb.upper()}({x}, {y})',
         ('e', ('e', 't')),
-        'Vt'
+        'Vt',
+        f'<lambda y: <lambda x: {verb.upper()}(_x_, _y_)>>'
     ),
     'Adj': lambda adjective: Formalization(
         lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
         (('e', 't'), ('e', 't')),
-        'Adj'
+        'Adj',
+        f'<lambda P: <lambda x: {adjective.upper()}(_x_) ^ _P_(_x_)>>'
     ),
     'Adv': lambda adverb: Formalization(
         lambda P: lambda x: f'{adverb.upper()}({P(x)})',
         (('e', 't'), ('e', 't')),
-        'Adv'
+        'Adv',
+        f'<lambda P: <lambda x: {adverb.upper()}(_P_(_x_))>>'
     ),
     'P': lambda preposition: Formalization(
         lambda x: lambda y: f'{preposition.upper()}({x}, {y})',
         ('e', ('e', 't')),
-        'P'
+        'P',
+        f'<lambda y: <lambda x: {preposition.upper()}(_x_, _y_)>>'
     ),
     'existential': lambda _: Formalization(
         lambda P: lambda Q: f'Exists x[{P("x")} ^ {Q("x")}]',
         (('e', 't'), (('e', 't'), 't')),
-        'existential'
+        'existential',
+        '<lambda P: <lambda Q: Exists x[_P_(x) ^ _Q_(x)]>>'
     ),
     'universal': lambda _: Formalization(
         lambda P: lambda Q: f'All x[{P("x")} -> {Q("x")}]',
         (('e', 't'), (('e', 't'), 't')),
-        'universal'
+        'universal',
+        '<lambda P: <lambda Q: All x[_P_(x) -> _Q_(x)]>>'
     )
 }
 
@@ -168,6 +211,12 @@ extensional_grammar = f"""
     {terminals_entries}
 """
 
+result = extensional_lexicon['Det']['every'].application(
+    extensional_lexicon['N']['student']
+).application(
+    extensional_lexicon['Vi']['passed']
+)
+print(result.string)
 # # for testing purposes
 # print(extensional_lexicon)
 # print(extensional_grammar)
