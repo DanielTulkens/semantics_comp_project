@@ -1,5 +1,6 @@
 import re
 
+# the words to use, sorted by parts of speech, subdivided where words of the same type need different formalizations
 vocabulary = {
     'P': (
         'with',
@@ -56,18 +57,21 @@ vocabulary = {
 }
 
 
+# a function that takes string representations of functions and combines them
 def combine_function_strings(f1, f2):
-    var_to_swap = f1[8]
-    full_function = f1[11:-1].replace(f'_{var_to_swap}_', f2)
+    var_to_swap = f1[8]  # find what symbol to substitute, formulas have form <lambda s : rest>
+    full_function = f1[11:-1].replace(f'_{var_to_swap}_', f2)  # remove brackets and substitute variables, marked _v_
     # print('full', full_function)
     while True:
+        # find cases for simplification. does not catch cases where function contains unresolved functions,
+        # or argument contains parentheses
         stuff_to_simplify = re.search(r'<[^<>]*>\([^()]*\)', full_function)
         if stuff_to_simplify:
-            stuff_to_simplify = stuff_to_simplify[0]
+            stuff_to_simplify = stuff_to_simplify[0]  # retrieve the actual string
             # print('to simplify', stuff_to_simplify)
             function_part = re.search(r'<[^<>]*>\(', stuff_to_simplify)[0][:-1]
             # print('fun', function_part)
-            argument_part = stuff_to_simplify.split(function_part)[-1][1:-1]
+            argument_part = stuff_to_simplify.replace(function_part, '')[1:-1]  # cut the parentheses
             # print('arg', argument_part)
             replacement = combine_function_strings(
                 function_part,
@@ -75,12 +79,12 @@ def combine_function_strings(f1, f2):
             )
             full_function = full_function.replace(stuff_to_simplify, replacement)
         else:
-            break
+            break  # exit once no simplifications can be made
     # print('simplified', full_function)
     return full_function
 
 
-# this class would create an object storing both the representation of an element, and its typing information
+# this class creates an object storing both the representation of an element, and its typing information
 class Formalization:
     def __init__(self, formula, type_hint, type_=None, formula_string=''):
         self.formula = formula
@@ -93,6 +97,7 @@ class Formalization:
         else:
             self.selected = None
 
+    # take another formalization object and try to compose them into a new object
     def application(self, argument):
         if argument.type == self.selected:
             resulting_formula = self.formula(argument.formula)
@@ -100,8 +105,20 @@ class Formalization:
             return Formalization(
                 formula=resulting_formula,
                 type_hint=self.returned,
-                formula_string=resulting_string)
+                formula_string=resulting_string
+            )
+        elif self.type == argument.selected:
+            resulting_formula = argument.formula(self.formula)
+            resulting_string = combine_function_strings(argument.string, self.string)
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=self.returned,
+                formula_string=resulting_string
+            )
+        else:
+            print('type mismatch')
 
+    # create an object where a given trace string is replaced by a variable
     def remove_traces(self, trace):
         split_formula = self.formula.split(trace)
         new_formula = lambda x: f'{x}'.join(split_formula)
@@ -169,10 +186,25 @@ formalizations = {
         (('e', 't'), (('e', 't'), 't')),
         'universal',
         '<lambda P: <lambda Q: All x[_P_(x) -> _Q_(x)]>>'
-    )
+    ),
+    # alternative entry for quantifiers where they can use variables represented by other things than x
+    # 'existential': lambda _: Formalization(
+    #     lambda v: lambda P: lambda Q: f'Exists {v}[{P({v})} ^ {Q({v})}]',
+    #     (('e', 't'), (('e', 't'), 't')),
+    #     'existential',
+    #     '<lambda v : <lambda P: <lambda Q: Exists v[_P_(v) ^ _Q_(v)]>>>'
+    # ),
+    # 'universal': lambda _: Formalization(
+    #     lambda v: lambda P: lambda Q: f'All {v}[{P({v})} -> {Q({v})}]',
+    #     (('e', 't'), (('e', 't'), 't')),
+    #     'universal',
+    #     '<lambda v : <lambda P: <lambda Q: All v[_P_(v) -> _Q_(v)]>>>'
+    # )
 }
 
 
+# takes a vocabulary and a dictionary of translation methods,
+# then returns a lexicon storing word: Formalization pairs sorted by parts of speech
 def generate_lexicon(vocab, translations):
     lexicon = {}
     for part_of_speech, entries in vocab.items():
@@ -187,6 +219,7 @@ def generate_lexicon(vocab, translations):
     return lexicon
 
 
+# generate entries for terminal symbol rules for use in grammar based on a lexicon as created by generate_lexicon
 def lexicon_to_terminals(lexicon):
     terminal_rules = ''
     for part_of_speech in lexicon.keys():
@@ -211,12 +244,13 @@ extensional_grammar = f"""
     {terminals_entries}
 """
 
-result = extensional_lexicon['Det']['every'].application(
-    extensional_lexicon['N']['student']
-).application(
-    extensional_lexicon['Vi']['passed']
-)
-print(result.string)
 # # for testing purposes
 # print(extensional_lexicon)
 # print(extensional_grammar)
+
+# result = extensional_lexicon['Det']['every'].application(
+#     extensional_lexicon['N']['student']
+# ).application(
+#     extensional_lexicon['Vi']['passed']
+# )
+# print(result.string)
