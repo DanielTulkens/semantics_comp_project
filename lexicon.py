@@ -135,7 +135,26 @@ class Formalization:
             print('type mismatch')
 
     def intensional_application(self, argument):
-        return
+        if argument.type == self.returned[0]:  # that is, it matches what is selected by the extension
+            resulting_formula = lambda w: self.formula(w)(argument.formula)
+            resulting_string = combine_function_strings(combine_function_strings(self.string, '_w_'), argument.string)
+            resulting_string = '<lambda w: ' + resulting_string + '>'
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=self.returned,
+                formula_string=resulting_string
+            )
+        elif argument.returned[0] == self.type:
+            resulting_formula = lambda w: argument.formula(w)(self.formula)
+            resulting_string = combine_function_strings(combine_function_strings(argument.string, '_w_'), self.string)
+            resulting_string = '<lambda w: ' + resulting_string + '>'
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=self.returned,
+                formula_string=resulting_string
+            )
+        else:
+            print('type mismatch')
 
     # create an object where a given trace string is replaced by a variable
     def remove_traces(self, trace):
@@ -279,23 +298,24 @@ intensional_formalizations = {
         f'<lambda w: <lambda y: <lambda x: {verb.upper()}(_w_)(_x_(_w_), _y_(_w_))>>>'
     ),
     'Adj': lambda adjective: Formalization(
-        lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
-        ('s', (('e', 't'), ('e', 't'))),
+        lambda w: lambda P: lambda x: f'{adjective.upper()}({w})({x(w)}) ^ {P(w)(x(w))}',
+        ('s', ((('s', 'e'), 't'), (('s', 'e'), 't'))),
         'Adj',
-        f'<lambda P: <lambda x: {adjective.upper()}(_x_) ^ _P_(_x_)>>'
+        f'<lambda w: <lambda P: <lambda x: {adjective.upper()}(_w_)(_x_(_w_)) ^ _P_(_w_)(_x_(_w_))>>>'
     ),
     'Adv': lambda adverb: Formalization(
-        lambda P: lambda x: f'{adverb.upper()}({P(x)})',
-        ('s', (('e', 't'), ('e', 't'))),
+        lambda w: lambda P: lambda x: f'{adverb.upper()}({w})({P(w)(x(w))})',
+        ('s', ((('s', 'e'), 't'), (('s', 'e'), 't'))),
         'Adv',
-        f'<lambda P: <lambda x: {adverb.upper()}(_P_(_x_))>>'
+        f'<lambda P: <lambda x: {adverb.upper()}(_w_)(_P_(_w_)(_x_(_w_)))>>'
     ),
     'P': lambda preposition: Formalization(
-        lambda x: lambda y: f'{preposition.upper()}({x}, {y})',
-        ('s', ('e', ('e', 't'))),
+        lambda w: lambda y: lambda x: f'{preposition.upper()}({w})({x(w)}, {y(w)})',
+        ('s', (('s', 'e'), (('s', 'e'), 't'))),
         'P',
-        f'<lambda y: <lambda x: {preposition.upper()}(_x_, _y_)>>'
+        f'<lambda w: <lambda y: <lambda x: {preposition.upper()}(_w_)(_x_(_w_), _y_(_w_))>>>'
     ),
+    # Predicate intension functions will attempt to call their argument, so quantifiers look like this now
     'existential': lambda _: Formalization(
         lambda w: lambda P: lambda Q: f'Exists x[{P(w)(lambda _: "x")} ^ {Q(w)(lambda _: "x")}]',
         ('s', (('s', (('s', 'e'), 't')), (('s', (('s', 'e'), 't')), 't'))),
@@ -309,6 +329,7 @@ intensional_formalizations = {
         '<lambda w: <lambda P: <lambda Q: All x[_P_(_w_)(x) -> _Q_(_w_)(x)]>>>'
     )
 }
+
 
 # takes a vocabulary and a dictionary of translation methods,
 # then returns a lexicon storing word: Formalization pairs sorted by parts of speech
