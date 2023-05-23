@@ -40,14 +40,14 @@ print('\n')
 for subtree in trees[2].subtrees():
     print(subtree)
 print('\n')
-for pos in trees[2].treepositions():
-    print(pos)
+for position in trees[2].treepositions():
+    print(position)
 print('\n')
-for pos in trees[2].treepositions(order="leaves"):
-    print(pos)
+for position in trees[2].treepositions(order="leaves"):
+    print(position)
 print('\n')
-for pos in trees[2].treepositions(order="postorder"):
-    print(pos)
+for position in trees[2].treepositions(order="postorder"):
+    print(position)
 print('\n')
 
 
@@ -115,6 +115,14 @@ existentials = ['a', 'some', 'an']
 universal = ['every']
 
 
+existentials = ['a', 'some', 'an']
+universal = ['every']
+
+
+def check_existential_children(result, node):
+    return result[node + (1,)].t in ['existential', 'universal'] or result[node + (0,)].t in ['existential', 'universal']
+
+
 def translate_to_logic(tree=nltk.Tree):
     result = {}
     prev_was_leave = False
@@ -124,12 +132,16 @@ def translate_to_logic(tree=nltk.Tree):
         if isinstance(tree[node], nltk.Tree):
             if len(tree[node]) > 1:
                 if tree[node].label() == 'S':
-                    if result[node + (1,)].t == 'existential':
+                    if check_existential_children(result, node):
+                        print("help")
                         result[node] = result[node + (0,)].application(result[node + (1,)])
                     else:
+                        print(result[node + (0,)])
                         result[node] = result[node + (1,)].application(result[node + (0,)])
                 else:
                     result[node] = result[node + (0,)].application(result[node + (1,)])
+                    if tree[node].label() == 'VP' and check_existential_children(result, node):
+                        return None
             else:
                 if prev_was_leave:
                     if leaf in existentials:
@@ -150,4 +162,4 @@ def translate_to_logic(tree=nltk.Tree):
 
 
 res = translate_to_logic(create_parse_tree(sentences[0]))
-res[()].formula
+print(res[()].formula)
