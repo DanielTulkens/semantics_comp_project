@@ -53,6 +53,13 @@ vocabulary = {
         'and',
         'or',
         'but'
+    ),
+    'Role': (
+        'agent',
+        'patient'
+    ),
+    'Event': (
+        'ev_exists'
     )
 }
 
@@ -115,8 +122,20 @@ class Formalization:
                 type_hint=self.returned,
                 formula_string=resulting_string
             )
+        # case where there are two predicates, expected in event semantics
+        elif (self.type == ('e', 't')) and (argument.type == ('e', 't')):
+            resulting_formula = lambda x: f'{argument.formula(x)} ^ {self.formula(x)}'
+            resulting_string = f'<lambda x: {argument.string}(_x_) ^ {self.string}(_x_)>'
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=self.returned,
+                formula_string=resulting_string
+            )
         else:
             print('type mismatch')
+
+    def intensional_application(self, argument):
+        return
 
     # create an object where a given trace string is replaced by a variable
     def remove_traces(self, trace):
@@ -202,6 +221,94 @@ formalizations = {
     # )
 }
 
+formalizations_events = formalizations.copy()
+formalizations_events.update({
+    'Vi': lambda verb: Formalization(
+        lambda e: f'{verb.upper()}({e})',
+        ('e', 't'),
+        'Vi',
+        f'<lambda e: {verb.upper()}(_e_)>'
+    ),
+    'Vt': lambda verb: Formalization(
+        lambda e: f'{verb.upper()}({e})',
+        ('e', 't'),
+        'Vt',
+        f'<lambda e: {verb.upper()}(_e_)>'
+    ),
+    'Adv': lambda adverb: Formalization(
+        lambda e: f'{adverb.upper()}({e})',
+        ('e', 't'),
+        'Adv',
+        f'<lambda e: {adverb.upper()}(_e_)>'
+    ),
+    'Role': lambda role: Formalization(
+        lambda x: lambda e: f'{role.upper()}({x}, {e})',
+        ('e', ('e', 't')),
+        'Role',
+        f'<lambda x: <lambda e: {role.upper()}(_x_, _e_)>>'
+    ),
+    'Event': lambda _: Formalization(
+        lambda P: f'Exists e[{P("e")}]',
+        (('e', 't'), 't')
+    )
+})
+
+intensional_formalizations = {
+    'PropN': lambda name: Formalization(
+        lambda w: name,
+        ('s', 'e'),
+        'PropN',
+        f'<lambda w: {name}>'
+    ),
+    'N': lambda noun: Formalization(
+        lambda w: lambda x: f'{noun.upper()}({w})({x(w)})',
+        ('s', (('s', 'e'), 't')),
+        'N',
+        f'<lambda w: <lambda x: {noun.upper()}(_w_)(_x_(_w_))>>'
+    ),
+    'Vi': lambda verb: Formalization(
+        lambda w: lambda x: f'{verb.upper()}({w})({x(w)})',
+        ('s', (('s', 'e'), 't')),
+        'N',
+        f'<lambda w: <lambda x: {verb.upper()}(_w_)(_x_(_w_))>>'
+    ),
+    'Vt': lambda verb: Formalization(
+        lambda w: lambda y: lambda x: f'{verb.upper()}({w})({x(w)}, {y(w)})',
+        ('s', (('s', 'e'), (('s', 'e'), 't'))),
+        'Vt',
+        f'<lambda w: <lambda y: <lambda x: {verb.upper()}(_w_)(_x_(_w_), _y_(_w_))>>>'
+    ),
+    'Adj': lambda adjective: Formalization(
+        lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
+        ('s', (('e', 't'), ('e', 't'))),
+        'Adj',
+        f'<lambda P: <lambda x: {adjective.upper()}(_x_) ^ _P_(_x_)>>'
+    ),
+    'Adv': lambda adverb: Formalization(
+        lambda P: lambda x: f'{adverb.upper()}({P(x)})',
+        ('s', (('e', 't'), ('e', 't'))),
+        'Adv',
+        f'<lambda P: <lambda x: {adverb.upper()}(_P_(_x_))>>'
+    ),
+    'P': lambda preposition: Formalization(
+        lambda x: lambda y: f'{preposition.upper()}({x}, {y})',
+        ('s', ('e', ('e', 't'))),
+        'P',
+        f'<lambda y: <lambda x: {preposition.upper()}(_x_, _y_)>>'
+    ),
+    'existential': lambda _: Formalization(
+        lambda w: lambda P: lambda Q: f'Exists x[{P(w)(lambda _: "x")} ^ {Q(w)(lambda _: "x")}]',
+        ('s', (('s', (('s', 'e'), 't')), (('s', (('s', 'e'), 't')), 't'))),
+        'existential',
+        '<lambda w: <lambda P: <lambda Q: Exists x[_P_(_w_)(x) ^ _Q_(_w_)(x)]>>>'
+    ),
+    'universal': lambda _: Formalization(
+        lambda w: lambda P: lambda Q: f'All x[{P(w)(lambda _: "x")} -> {Q(w)(lambda _: "x")}]',
+        ('s', (('s', (('s', 'e'), 't')), (('s', (('s', 'e'), 't')), 't'))),
+        'universal',
+        '<lambda P: <lambda Q: All x[_P_(x) -> _Q_(x)]>>'
+    )
+}
 
 # takes a vocabulary and a dictionary of translation methods,
 # then returns a lexicon storing word: Formalization pairs sorted by parts of speech
