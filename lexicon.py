@@ -306,7 +306,7 @@ intensional_formalizations = {
         lambda w: lambda P: lambda Q: f'All x[{P(w)(lambda _: "x")} -> {Q(w)(lambda _: "x")}]',
         ('s', (('s', (('s', 'e'), 't')), (('s', (('s', 'e'), 't')), 't'))),
         'universal',
-        '<lambda P: <lambda Q: All x[_P_(x) -> _Q_(x)]>>'
+        '<lambda w: <lambda P: <lambda Q: All x[_P_(_w_)(x) -> _Q_(_w_)(x)]>>>'
     )
 }
 
