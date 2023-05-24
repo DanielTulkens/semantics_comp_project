@@ -30,6 +30,9 @@ vocabulary = {
         'sees',
         'teaches'
     ),
+    'Vpro': (
+        'think'
+    ),
     'Adj': (
         'eager',
         'smart'
@@ -119,7 +122,7 @@ class Formalization:
             resulting_string = combine_function_strings(argument.string, self.string)
             return Formalization(
                 formula=resulting_formula,
-                type_hint=self.returned,
+                type_hint=argument.returned,
                 formula_string=resulting_string
             )
         # case where there are two predicates, expected in event semantics
@@ -141,7 +144,7 @@ class Formalization:
             resulting_string = '<lambda w: ' + resulting_string + '>'
             return Formalization(
                 formula=resulting_formula,
-                type_hint=self.returned,
+                type_hint=('s', self.returned[1]),
                 formula_string=resulting_string
             )
         elif argument.returned[0] == self.type:
@@ -150,7 +153,7 @@ class Formalization:
             resulting_string = '<lambda w: ' + resulting_string + '>'
             return Formalization(
                 formula=resulting_formula,
-                type_hint=self.returned,
+                type_hint=('s', argument.returned[1]),
                 formula_string=resulting_string
             )
         else:
@@ -194,6 +197,12 @@ formalizations = {
         ('e', ('e', 't')),
         'Vt',
         f'<lambda y: <lambda x: {verb.upper()}(_x_, _y_)>>'
+    ),
+    'Vpro': lambda verb: Formalization(
+        lambda P: lambda x: f'{verb.upper()}({x}, {P})',
+        ('t', ('e', 't')),
+        'Vpro',
+        f'<lambda P: <lambda x: {verb.upper()}(_x_, _P_)'
     ),
     'Adj': lambda adjective: Formalization(
         lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
@@ -357,8 +366,8 @@ def lexicon_to_terminals(lexicon):
 
 
 extensional_lexicon = generate_lexicon(vocabulary, formalizations)
-
-terminals_entries = lexicon_to_terminals(extensional_lexicon)
+intensional_lexicon = generate_lexicon(vocabulary, intensional_formalizations)
+event_lexicon = generate_lexicon(vocabulary, formalizations_events)
 
 extensional_grammar = f"""
     S -> NP VP
@@ -369,9 +378,21 @@ extensional_grammar = f"""
     AdvP -> Adv P
     PP -> P NP
     
-    {terminals_entries}
+    {lexicon_to_terminals(extensional_lexicon)}
 """
 
+event_grammar = f"""
+    EP -> Event VP
+    ThetaP -> Role DP
+    DP -> Det NP | NP | DP Conj DP
+    NP -> N | PropN | Adj NP | NP PP
+    VP -> ThetaP VP | Vi | Vt  | Vbar DP | Vbar DP PP | AdvP VP | VP Adv | VP Conj VP | V AdvP
+    Vbar -> Vi | Vt
+    AdvP -> Adv P
+    PP -> P DP
+    
+    {lexicon_to_terminals(event_lexicon)}
+"""
 # # for testing purposes
 # print(extensional_lexicon)
 # print(extensional_grammar)
