@@ -119,8 +119,9 @@ existentials = ['a', 'some', 'an']
 universal = ['every']
 
 
-def check_quantifier_children(result, node):
-    return result[node + (1,)].t in ['existential', 'universal'] or result[node + (0,)].t in ['existential', 'universal']
+def check_quantified_children(tree, node):
+    quantified = get_quantifier_DP_positions(tree)
+    return tree[node + (1,)] in quantified or tree[node + (0,)] in quantified
 
 
 def quantifier_raising(tree, nb, position):
@@ -220,7 +221,7 @@ def translate_to_logic(tree=nltk.Tree):
         if isinstance(tree[node], nltk.Tree):
             if len(tree[node]) > 1:
                 if tree[node].label() == 'S':
-                    if check_quantifier_children(result, node):
+                    if check_quantified_children(tree, node):
                         result[node] = result[node + (0,)].application(result[node + (1,)])
                     else:
                         result[node] = result[node + (1,)].application(result[node + (0,)])
@@ -230,17 +231,11 @@ def translate_to_logic(tree=nltk.Tree):
                             result[node] = result[node + (1,)].application(result[node + (0,)])
                     else:
                         result[node] = result[node + (0,)].application(result[node + (1,)])
-                    if tree[node].label() == 'VP' and check_quantifier_children(result, node):
+                    if tree[node].label() == 'VP' and check_quantified_children(tree, node):
                         return None
             else:
                 if prev_was_leave:
-                    if leaf in existentials:
-                        applier = 'existential'
-                    elif leaf in universal:
-                        applier = 'universal'
-                    else:
-                        applier = tree[node].label()
-                    result[node] = formalizations[applier](leaf)
+                    result[node] = formalizations[tree[node].label()][leaf]
                     root_cause = result[node]
                     prev_was_leave = False
                 elif not re.match(r"t\d+", leaf):
@@ -249,7 +244,7 @@ def translate_to_logic(tree=nltk.Tree):
             prev_was_leave = True
             leaf = tree[node]
             if re.match(r"t\d+", leaf):
-                result[node] = formalizations['PropN'](leaf)
+                result[node] = lexicon.formalizations['PropN'](leaf)
     return result
 
 
