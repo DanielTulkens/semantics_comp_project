@@ -30,6 +30,9 @@ vocabulary = {
         'sees',
         'teaches'
     ),
+    'Vpro': (
+        'think'
+    ),
     'Adj': (
         'eager',
         'smart'
@@ -53,6 +56,13 @@ vocabulary = {
         'and',
         'or',
         'but'
+    ),
+    'Role': (
+        'agent',
+        'patient'
+    ),
+    'Event': (
+        'ev_exists'
     )
 }
 
@@ -112,7 +122,38 @@ class Formalization:
             resulting_string = combine_function_strings(argument.string, self.string)
             return Formalization(
                 formula=resulting_formula,
+                type_hint=argument.returned,
+                formula_string=resulting_string
+            )
+        # case where there are two predicates, expected in event semantics
+        elif (self.type == ('e', 't')) and (argument.type == ('e', 't')):
+            resulting_formula = lambda x: f'{argument.formula(x)} ^ {self.formula(x)}'
+            resulting_string = f'<lambda x: {argument.string}(_x_) ^ {self.string}(_x_)>'
+            return Formalization(
+                formula=resulting_formula,
                 type_hint=self.returned,
+                formula_string=resulting_string
+            )
+        else:
+            print('type mismatch')
+
+    def intensional_application(self, argument):
+        if argument.type == self.returned[0]:  # that is, it matches what is selected by the extension
+            resulting_formula = lambda w: self.formula(w)(argument.formula)
+            resulting_string = combine_function_strings(combine_function_strings(self.string, '_w_'), argument.string)
+            resulting_string = '<lambda w: ' + resulting_string + '>'
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=('s', self.returned[1]),
+                formula_string=resulting_string
+            )
+        elif argument.returned[0] == self.type:
+            resulting_formula = lambda w: argument.formula(w)(self.formula)
+            resulting_string = combine_function_strings(combine_function_strings(argument.string, '_w_'), self.string)
+            resulting_string = '<lambda w: ' + resulting_string + '>'
+            return Formalization(
+                formula=resulting_formula,
+                type_hint=('s', argument.returned[1]),
                 formula_string=resulting_string
             )
         else:
@@ -156,6 +197,12 @@ formalizations = {
         ('e', ('e', 't')),
         'Vt',
         f'<lambda y: <lambda x: {verb.upper()}(_x_, _y_)>>'
+    ),
+    'Vpro': lambda verb: Formalization(
+        lambda P: lambda x: f'{verb.upper()}({x}, {P})',
+        ('t', ('e', 't')),
+        'Vpro',
+        f'<lambda P: <lambda x: {verb.upper()}(_x_, _P_)'
     ),
     'Adj': lambda adjective: Formalization(
         lambda P: lambda x: f'{adjective.upper()}({x}) ^ {P(x)}',
@@ -202,6 +249,96 @@ formalizations = {
     # )
 }
 
+formalizations_events = formalizations.copy()
+formalizations_events.update({
+    'Vi': lambda verb: Formalization(
+        lambda e: f'{verb.upper()}({e})',
+        ('e', 't'),
+        'Vi',
+        f'<lambda e: {verb.upper()}(_e_)>'
+    ),
+    'Vt': lambda verb: Formalization(
+        lambda e: f'{verb.upper()}({e})',
+        ('e', 't'),
+        'Vt',
+        f'<lambda e: {verb.upper()}(_e_)>'
+    ),
+    'Adv': lambda adverb: Formalization(
+        lambda e: f'{adverb.upper()}({e})',
+        ('e', 't'),
+        'Adv',
+        f'<lambda e: {adverb.upper()}(_e_)>'
+    ),
+    'Role': lambda role: Formalization(
+        lambda x: lambda e: f'{role.upper()}({x}, {e})',
+        ('e', ('e', 't')),
+        'Role',
+        f'<lambda x: <lambda e: {role.upper()}(_x_, _e_)>>'
+    ),
+    'Event': lambda _: Formalization(
+        lambda P: f'Exists e[{P("e")}]',
+        (('e', 't'), 't')
+    )
+})
+
+intensional_formalizations = {
+    'PropN': lambda name: Formalization(
+        lambda w: name,
+        ('s', 'e'),
+        'PropN',
+        f'<lambda w: {name}>'
+    ),
+    'N': lambda noun: Formalization(
+        lambda w: lambda x: f'{noun.upper()}({w})({x(w)})',
+        ('s', (('s', 'e'), 't')),
+        'N',
+        f'<lambda w: <lambda x: {noun.upper()}(_w_)(_x_(_w_))>>'
+    ),
+    'Vi': lambda verb: Formalization(
+        lambda w: lambda x: f'{verb.upper()}({w})({x(w)})',
+        ('s', (('s', 'e'), 't')),
+        'N',
+        f'<lambda w: <lambda x: {verb.upper()}(_w_)(_x_(_w_))>>'
+    ),
+    'Vt': lambda verb: Formalization(
+        lambda w: lambda y: lambda x: f'{verb.upper()}({w})({x(w)}, {y(w)})',
+        ('s', (('s', 'e'), (('s', 'e'), 't'))),
+        'Vt',
+        f'<lambda w: <lambda y: <lambda x: {verb.upper()}(_w_)(_x_(_w_), _y_(_w_))>>>'
+    ),
+    'Adj': lambda adjective: Formalization(
+        lambda w: lambda P: lambda x: f'{adjective.upper()}({w})({x(w)}) ^ {P(w)(x(w))}',
+        ('s', ((('s', 'e'), 't'), (('s', 'e'), 't'))),
+        'Adj',
+        f'<lambda w: <lambda P: <lambda x: {adjective.upper()}(_w_)(_x_(_w_)) ^ _P_(_w_)(_x_(_w_))>>>'
+    ),
+    'Adv': lambda adverb: Formalization(
+        lambda w: lambda P: lambda x: f'{adverb.upper()}({w})({P(w)(x(w))})',
+        ('s', ((('s', 'e'), 't'), (('s', 'e'), 't'))),
+        'Adv',
+        f'<lambda P: <lambda x: {adverb.upper()}(_w_)(_P_(_w_)(_x_(_w_)))>>'
+    ),
+    'P': lambda preposition: Formalization(
+        lambda w: lambda y: lambda x: f'{preposition.upper()}({w})({x(w)}, {y(w)})',
+        ('s', (('s', 'e'), (('s', 'e'), 't'))),
+        'P',
+        f'<lambda w: <lambda y: <lambda x: {preposition.upper()}(_w_)(_x_(_w_), _y_(_w_))>>>'
+    ),
+    # Predicate intension functions will attempt to call their argument, so quantifiers look like this now
+    'existential': lambda _: Formalization(
+        lambda w: lambda P: lambda Q: f'Exists x[{P(w)(lambda _: "x")} ^ {Q(w)(lambda _: "x")}]',
+        ('s', (('s', (('s', 'e'), 't')), (('s', (('s', 'e'), 't')), 't'))),
+        'existential',
+        '<lambda w: <lambda P: <lambda Q: Exists x[_P_(_w_)(x) ^ _Q_(_w_)(x)]>>>'
+    ),
+    'universal': lambda _: Formalization(
+        lambda w: lambda P: lambda Q: f'All x[{P(w)(lambda _: "x")} -> {Q(w)(lambda _: "x")}]',
+        ('s', (('s', (('s', 'e'), 't')), (('s', (('s', 'e'), 't')), 't'))),
+        'universal',
+        '<lambda w: <lambda P: <lambda Q: All x[_P_(_w_)(x) -> _Q_(_w_)(x)]>>>'
+    )
+}
+
 
 # takes a vocabulary and a dictionary of translation methods,
 # then returns a lexicon storing word: Formalization pairs sorted by parts of speech
@@ -229,8 +366,8 @@ def lexicon_to_terminals(lexicon):
 
 
 extensional_lexicon = generate_lexicon(vocabulary, formalizations)
-
-terminals_entries = lexicon_to_terminals(extensional_lexicon)
+intensional_lexicon = generate_lexicon(vocabulary, intensional_formalizations)
+event_lexicon = generate_lexicon(vocabulary, formalizations_events)
 
 extensional_grammar = f"""
     S -> NP VP
@@ -241,9 +378,21 @@ extensional_grammar = f"""
     AdvP -> Adv P
     PP -> P NP
     
-    {terminals_entries}
+    {lexicon_to_terminals(extensional_lexicon)}
 """
 
+event_grammar = f"""
+    EP -> Event VP
+    ThetaP -> Role DP
+    DP -> Det NP | NP | DP Conj DP
+    NP -> N | PropN | Adj NP | NP PP
+    VP -> ThetaP VP | Vi | Vt  | Vbar DP | Vbar DP PP | AdvP VP | VP Adv | VP Conj VP | V AdvP
+    Vbar -> Vi | Vt
+    AdvP -> Adv P
+    PP -> P DP
+    
+    {lexicon_to_terminals(event_lexicon)}
+"""
 # # for testing purposes
 # print(extensional_lexicon)
 # print(extensional_grammar)
