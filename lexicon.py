@@ -370,13 +370,13 @@ intensional_lexicon = generate_lexicon(vocabulary, intensional_formalizations)
 event_lexicon = generate_lexicon(vocabulary, formalizations_events)
 
 extensional_grammar = f"""
-    S -> NP VP
-    NP -> Det Nom | PropN
-    Nom -> N  | Adj Nom | Nom PP
-    VP -> Vi | Vt  | Vbar NP | Vbar NP PP | Adv VP | VP Adv | VP Conj VP | V AdvP
+    S -> DP VP
+    DP -> Det NP | PropN
+    NP -> N  | Adj NP | NP PP
+    VP -> Vi | Vt  | Vbar DP | Vbar DP PP | Adv VP | VP Adv | VP Conj VP | V AdvP
     Vbar -> Vi | Vt
     AdvP -> Adv P
-    PP -> P NP
+    PP -> P DP
     
     {lexicon_to_terminals(extensional_lexicon)}
 """
