@@ -28,28 +28,6 @@ def create_parse_tree(sentence):
 
 trees = [create_parse_tree(sentence) for sentence in sentences]
 
-# # select the verb for the sentence 'john sees mary'
-# print(trees[0][1, 0])
-# # select the subject for the sentence 'john sees mary'
-# print(trees[0][0])
-# # select the determiner for sentence 'A student walks'
-# print(trees[1][0, 0])
-# print('\n')
-#
-# # practice iterating
-# for sub in trees[2].subtrees():
-#     print(sub)
-# print('\n')
-# for pos in trees[2].treepositions():
-#     print(pos)
-# print('\n')
-# for pos in trees[2].treepositions(order="leaves"):
-#     print(pos)
-# print('\n')
-# for pos in trees[2].treepositions(order="postorder"):
-#     print(pos)
-# print('\n')
-
 
 # Define a function that takes a position in the parse tree (i.e., a tuple like (0, 1, 1))
 # and returns the position of the parent node ((0, 1) in this case), or None if it has no parent.
@@ -124,100 +102,6 @@ def check_quantified_children(tree, node):
     return (tree[node + (1,)] in quantified) or (tree[node + (0,)] in quantified)
 
 
-def quantifier_raising(tree, nb, position):
-    tree_ = tree.copy(deep=True)
-    for i in range(nb - 1):
-        new_position = (1,) + position
-        position = new_position
-        # print(f'the position is {position}')
-
-    qp = tree_[position]
-    tree_[position] = Tree('Trace', [f't{nb}'])
-    print('after trace added \n')
-    tree_.pretty_print()
-
-    tree_ = nltk.Tree(f'S{nb}', [qp, tree_])
-    tree_[0].set_label(f'DP{nb}')
-    return tree_
-
-
-def raiser(tree=nltk.Tree):
-    tree_list = []
-    tree1 = tree.copy(deep=True)
-    quant_dict = {}
-    for node in tree1.treepositions(order='postorder'):
-        if (tree1[node] in existentials) or (tree1[node] in universal):
-            quant_dict[node[:-2]] = tree1[node[:-2]]
-    print(quant_dict)
-    nb = 0
-    print('First Version \n')
-    for key in quant_dict.keys():
-        # print(quant_dict[key])
-
-        nb += 1
-        tree1 = quantifier_raising(tree1, nb, key)
-        tree1.pretty_print()
-    tree_list.append(tree1)
-    if len(quant_dict) == 2:  # if there is another QP we will generate a new possible structure
-        tree2 = tree.copy(deep=True)
-        nb = 0
-        print('Second Version \n')
-        for key in reversed(quant_dict.keys()):
-            print(quant_dict[key])
-            nb += 1
-            tree2 = quantifier_raising(tree2, nb, key)
-            tree2.pretty_print()
-    tree_list.append(tree2)
-    return tree_list
-
-
-def quantifier_logic(tree=nltk.Tree):
-    traces = {}
-    tree = tree.copy(deep=True)
-    for node in tree.treepositions(order="postorder"):
-        if isinstance(tree[node], nltk.Tree):
-            if len(tree[node]) > 1:
-                if tree[node].label() == 'S':
-                    basic_tree = tree[node]
-                    base_logic = translate_to_logic(
-                        basic_tree)  # get the logicial form from below the raised quantifiers
-            if tree[node].label() == 'Trace_e':
-                traces[tree[node, 0]] = node + (0,)  # collect traces positions and names in a dictionary
-    # print(traces)
-    subtree_logic = {}
-    for trace in traces.keys():  # now we will slowly do lambda abstraction per raised quantifier
-        trace_number = trace[-1]
-        for node in tree.treepositions(order="postorder"):
-            if isinstance(tree[node], nltk.Tree):
-                if len(tree[node]) > 1:
-                    if tree[node].label() == f'DP{trace_number}':
-                        subtree = tree[node].copy(deep=True)
-                        subtree.set_label('DP')
-                        sub_tree = nltk.Tree('S', [subtree,
-                                                   Tree('VP', [Tree('Vi', ['t_verb'])])])  # added a dummy verb because
-                        # the logic function does not like computing things without a verb
-                        # sub_tree.pretty_print()
-                        sub_logic = translate_to_logic(sub_tree)
-                        # print(sub_logic[()].formula)
-                        subtree_logic[trace] = sub_logic[()].formula
-
-    variables = ['x', 'y', 'z']
-    t = 0
-    # trace_iteration = subtrees[list(subtrees.keys())[0]]
-    new_logic = base_logic[()].formula
-
-    for trace in subtree_logic.keys():
-        subtree_logic[trace] = re.sub(r'(\W)x(\W)', '\\1' + variables[t] + '\\2', subtree_logic[trace])
-        trace_logic = subtree_logic[trace]
-        new_logic = re.sub(r'T_VERB\(' + variables[t] + r'\)', new_logic, trace_logic)  # fill predicate
-        # print(new_logic)
-        new_logic = re.sub(trace, variables[t], new_logic)  # fill trace with variable
-        t += 1
-
-        logic = new_logic
-    return logic
-
-
 def formalize_single_node(node, translations):
     if isinstance(node, nltk.Tree):
         if not node[:-1]:  # that is, if there is only one child node
@@ -234,7 +118,7 @@ def formalize_single_node(node, translations):
         return translations[node]
 
 
-def translate_to_logic2(tree=nltk.Tree, use_events=False):
+def translate_to_logic(tree=nltk.Tree, use_events=False):
     if use_events:
         translation_method = lexicon.event_lexicon
     else:
@@ -244,38 +128,6 @@ def translate_to_logic2(tree=nltk.Tree, use_events=False):
         return top_node_formalization.formula
     else:
         return top_node_formalization.string
-
-
-def translate_to_logic(tree=nltk.Tree):
-    result = {}
-    prev_was_leaf = False
-    leaf = ''
-    root_cause = None
-    for node in tree.treepositions(order='postorder'):
-        if not isinstance(tree[node], nltk.Tree):
-            prev_was_leaf = True
-            leaf = tree[node]
-            if re.match(r"t\d+", leaf):
-                result[node] = lexicon.formalizations['PropN'](leaf)
-        elif len(tree[node]) > 1:
-            if tree[node].label() == 'S':
-                result[node] = result[node + (0,)].application(result[node + (1,)])
-            else:
-                if not isinstance(tree[node + (0,)], nltk.Tree):  # If a t is in zero position apply flipped
-                    if re.match(r't\d+', tree[node + (0,)]):
-                        result[node] = result[node + (1,)].application(result[node + (0,)])
-                else:
-                    result[node] = result[node + (0,)].application(result[node + (1,)])
-                if tree[node].label() == 'VP' and check_quantified_children(tree, node):
-                    return None
-        elif prev_was_leaf:
-            result[node] = formalizations[leaf]
-            root_cause = result[node]
-            prev_was_leaf = False
-        elif not re.match(r"t\d+", leaf):
-            result[node] = root_cause
-
-    return result
 
 
 def create_event_tree(base_tree):
@@ -321,7 +173,7 @@ def show_all_formulas(tree):
     for possibility in quantifier_possibilities(tree):
         possibility.pretty_print()
         # print(translate_to_logic(possibility)[()].formula)
-        print(translate_to_logic2(possibility, use_events=True))
+        print(translate_to_logic(possibility, use_events=True))
 
 
 for t in trees:
