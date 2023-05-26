@@ -121,7 +121,7 @@ universal = ['every']
 
 def check_quantified_children(tree, node):
     quantified = get_quantifier_DP_positions(tree)
-    return tree[node + (1,)] in quantified or tree[node + (0,)] in quantified
+    return (tree[node + (1,)] in quantified) or (tree[node + (0,)] in quantified)
 
 
 def quantifier_raising(tree, nb, position):
@@ -212,6 +212,27 @@ def quantifier_logic(tree=nltk.Tree):
     return logic
 
 
+def formalize_single_node(node):
+    if isinstance(node, nltk.Tree):
+        if node[:-1]:  # that is, if there are multiple direct children
+            result = formalize_single_node(node[0]).application(formalize_single_node(node[1]))
+        else:
+            result = formalize_single_node(node[0])
+    elif re.match(r"t\d+", node):  # if it is a trace
+        result = lexicon.formalizations['PropN'](node)
+    else:
+        result = formalizations[node]
+    return result
+
+
+def translate_to_logic2(tree=nltk.Tree):
+    top_node_formalization = formalize_single_node(tree[()])
+    if type(top_node_formalization.formula) == str:
+        return top_node_formalization.formula
+    else:
+        return top_node_formalization.string
+
+
 def translate_to_logic(tree=nltk.Tree):
     result = {}
     prev_was_leaf = False
@@ -234,13 +255,12 @@ def translate_to_logic(tree=nltk.Tree):
                     result[node] = result[node + (0,)].application(result[node + (1,)])
                 if tree[node].label() == 'VP' and check_quantified_children(tree, node):
                     return None
-        else:
-            if prev_was_leaf:
-                result[node] = formalizations[leaf]
-                root_cause = result[node]
-                prev_was_leaf = False
-            elif not re.match(r"t\d+", leaf):
-                result[node] = root_cause
+        elif prev_was_leaf:
+            result[node] = formalizations[leaf]
+            root_cause = result[node]
+            prev_was_leaf = False
+        elif not re.match(r"t\d+", leaf):
+            result[node] = root_cause
 
     return result
 
@@ -273,6 +293,13 @@ def quantifier_possibilities(tree=nltk.Tree, by='DP'):  # Calculate all possible
     return possibilities
 
 
-iterations = quantifier_possibilities(trees[2])
-iterations[0].pretty_print()
-print(translate_to_logic(iterations[0])[(0,)].formula)
+def show_all_formulas(tree):
+    for possibility in quantifier_possibilities(tree):
+        possibility.pretty_print()
+        # print(translate_to_logic(possibility)[()].formula)
+        print(translate_to_logic2(possibility))
+
+
+for t in trees:
+    # print(translate_to_logic2(t))
+    show_all_formulas(t)
