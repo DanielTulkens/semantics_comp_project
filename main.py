@@ -179,14 +179,15 @@ def quantifier_logic(tree=nltk.Tree):
             if len(tree[node]) > 1:
                 if tree[node].label() == 'S':
                     basic_tree = tree[node]
-                    print('basic tree:\n')
-                    basic_tree.pretty_print()
+                    # print('basic tree:\n')
+                    # basic_tree.pretty_print()
                     base_logic = translate_to_logic(
-                        basic_tree)  # get the logical form from below the raised quantifiers
-                    print(base_logic[()].formula)
-            if tree[node].label() == 'Trace':
+                        basic_tree)  # get the logcial form from below the raised quantifiers
+                    # print(base_logic[()].formula)
+            if tree[node].label() == 'Trace_e':
                 traces[tree[node, 0]] = node + (0,)  # collect traces positions and names in a dictionary
-    print(traces)
+    # print(traces)
+    subtree_logic = {}
     for trace in traces.keys():  # now we will slowly do lambda abstraction per raised quantifier
         trace_number = trace[-1]
         for node in tree.treepositions(order="postorder"):
@@ -195,20 +196,28 @@ def quantifier_logic(tree=nltk.Tree):
                     if tree[node].label() == f'DP{trace_number}':
                         subtree = tree[node].copy(deep=True)
                         subtree.set_label('DP')
-                        new_tree = nltk.Tree('S', [subtree])
-                        sub_logic = translate_to_logic(subtree)
-                        print(sub_logic[()].formula)  # doesn't work?
-                        new_tree.pretty_print()
+                        sub_tree = nltk.Tree('S', [subtree,
+                                                   Tree('VP', [Tree('Vi', ['t_verb'])])])  # added a dummy verb because
+                        # the logic function does not like computing things without a verb
+                        # sub_tree.pretty_print()
+                        sub_logic = translate_to_logic(sub_tree)
+                        # print(sub_logic[()].formula)
+                        subtree_logic[trace] = sub_logic[()].formula
 
-        lambda_abstraction = lambda trace: f'{base_logic}'
-        # what I want to do here is to have a variable like 'x' replacing the position of trace in the base logic
+    variables = ['x', 'y', 'z']
+    t = 0
+    # trace_iteration = subtrees[list(subtrees.keys())[0]]
+    new_logic = base_logic[()].formula
 
-        result = sub_logic[()].application(base_logic[
-                                               ()])  # I want to apply the base logic to the quantifier phrase
-        print(result)  # gives none
-    # repeat for next trace -> have to make sure that we get a new variable for the next quantifier phrase
-    # (otherwise subject and object are referring to the same thing)
-    logic = ...
+    for trace in subtree_logic.keys():
+        subtree_logic[trace] = re.sub(r'(\W)x(\W)', '\\1' + variables[t] + '\\2', subtree_logic[trace])
+        trace_logic = subtree_logic[trace]
+        new_logic = re.sub(r'T_VERB\(' + variables[t] + r'\)', new_logic, trace_logic)  # fill predicate
+        # print(new_logic)
+        new_logic = re.sub(trace, variables[t], new_logic)  # fill trace with variable
+        t += 1
+
+        logic = new_logic
     return logic
 
 
