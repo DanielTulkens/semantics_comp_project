@@ -131,7 +131,7 @@ class Formalization:
             resulting_string = f'<lambda x: {argument.string}(_x_) ^ {self.string}(_x_)>'
             return Formalization(
                 formula=resulting_formula,
-                type_hint=self.returned,
+                type_hint=('e', 't'),
                 formula_string=resulting_string
             )
         else:
@@ -277,7 +277,9 @@ formalizations_events.update({
     ),
     'Event': lambda _: Formalization(
         lambda P: f'Exists e[{P("e")}]',
-        (('e', 't'), 't')
+        (('e', 't'), 't'),
+        'Event',
+        f'<lambda P: Exists e[_P_(e)]>'
     )
 })
 
@@ -391,16 +393,16 @@ event_grammar = f"""
     ThetaP -> Role DP
     DP -> Det NP | NP | DP Conj DP
     NP -> N | PropN | Adj NP | NP PP
-    VP -> ThetaP VP | Vi | Vt  | Vbar DP | Vbar DP PP | AdvP VP | VP Adv | VP Conj VP | V AdvP
+    VP -> ThetaP VP | Vi | Vt | Vbar ThetaP | Vbar ThetaP PP | AdvP VP | VP Adv | VP Conj VP | V AdvP
     Vbar -> Vi | Vt
     AdvP -> Adv P
     PP -> P DP
     
     {vocabulary_to_terminals(vocabulary)}
 """
-# for testing purposes
-print(extensional_lexicon)
-print(extensional_grammar)
+# # for testing purposes
+# print(event_lexicon)
+# print(extensional_grammar)
 
 # result = extensional_lexicon['Det']['every'].application(
 #     extensional_lexicon['N']['student']

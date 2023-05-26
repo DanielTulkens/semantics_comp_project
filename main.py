@@ -5,7 +5,7 @@ import re
 
 import lexicon
 
-formalizations = lexicon.extensional_lexicon
+formalizations = lexicon.event_lexicon
 grammar = nltk.CFG.fromstring(lexicon.extensional_grammar)
 
 parser = nltk.parse.BottomUpLeftCornerChartParser(grammar)
@@ -28,27 +28,27 @@ def create_parse_tree(sentence):
 
 trees = [create_parse_tree(sentence) for sentence in sentences]
 
-# select the verb for the sentence 'john sees mary'
-print(trees[0][1, 0])
-# select the subject for the sentence 'john sees mary'
-print(trees[0][0])
-# select the determiner for sentence 'A student walks'
-print(trees[1][0, 0])
-print('\n')
-
-# practice iterating
-for sub in trees[2].subtrees():
-    print(sub)
-print('\n')
-for pos in trees[2].treepositions():
-    print(pos)
-print('\n')
-for pos in trees[2].treepositions(order="leaves"):
-    print(pos)
-print('\n')
-for pos in trees[2].treepositions(order="postorder"):
-    print(pos)
-print('\n')
+# # select the verb for the sentence 'john sees mary'
+# print(trees[0][1, 0])
+# # select the subject for the sentence 'john sees mary'
+# print(trees[0][0])
+# # select the determiner for sentence 'A student walks'
+# print(trees[1][0, 0])
+# print('\n')
+#
+# # practice iterating
+# for sub in trees[2].subtrees():
+#     print(sub)
+# print('\n')
+# for pos in trees[2].treepositions():
+#     print(pos)
+# print('\n')
+# for pos in trees[2].treepositions(order="leaves"):
+#     print(pos)
+# print('\n')
+# for pos in trees[2].treepositions(order="postorder"):
+#     print(pos)
+# print('\n')
 
 
 # Define a function that takes a position in the parse tree (i.e., a tuple like (0, 1, 1))
@@ -179,11 +179,8 @@ def quantifier_logic(tree=nltk.Tree):
             if len(tree[node]) > 1:
                 if tree[node].label() == 'S':
                     basic_tree = tree[node]
-                    # print('basic tree:\n')
-                    # basic_tree.pretty_print()
                     base_logic = translate_to_logic(
-                        basic_tree)  # get the logcial form from below the raised quantifiers
-                    # print(base_logic[()].formula)
+                        basic_tree)  # get the logicial form from below the raised quantifiers
             if tree[node].label() == 'Trace_e':
                 traces[tree[node, 0]] = node + (0,)  # collect traces positions and names in a dictionary
     # print(traces)
@@ -221,24 +218,28 @@ def quantifier_logic(tree=nltk.Tree):
     return logic
 
 
-def formalize_single_node(node):
+def formalize_single_node(node, translations):
     if isinstance(node, nltk.Tree):
         if not node[:-1]:  # that is, if there is only one child node
-            return formalize_single_node(node[0])
-        right_node = formalize_single_node(node[1])
+            return formalize_single_node(node[0], translations)
+        right_node = formalize_single_node(node[1], translations)
         if right_node.type == 't':
             trace_name = node[0].label().replace('DP', 't')
-            return right_node.remove_traces(trace_name).application(formalize_single_node(node[0]))
+            return right_node.remove_traces(trace_name).application(formalize_single_node(node[0], translations))
         else:
-            return formalize_single_node(node[0]).application(formalize_single_node(node[1]))
+            return formalize_single_node(node[0], translations).application(formalize_single_node(node[1], translations))
     elif re.match(r"t\d+", node):  # if it is a trace
         return lexicon.formalizations['PropN'](node)
     else:
-        return formalizations[node]
+        return translations[node]
 
 
-def translate_to_logic2(tree=nltk.Tree):
-    top_node_formalization = formalize_single_node(tree[()])
+def translate_to_logic2(tree=nltk.Tree, use_events=False):
+    if use_events:
+        translation_method = lexicon.event_lexicon
+    else:
+        translation_method = lexicon.extensional_lexicon
+    top_node_formalization = formalize_single_node(tree[()], translation_method)
     if type(top_node_formalization.formula) == str:
         return top_node_formalization.formula
     else:
@@ -277,6 +278,16 @@ def translate_to_logic(tree=nltk.Tree):
     return result
 
 
+def create_event_tree(base_tree):
+    tree = base_tree.copy()
+    subj_pos = get_subject_position(tree)
+    tree[subj_pos] = Tree('ThetaP', [Tree('Role', ['agent']), tree[subj_pos]])
+    if obj_pos := get_object_position(tree):
+        tree[obj_pos] = Tree('ThetaP', [Tree('Role', ['patient']), tree[obj_pos]])
+    tree = Tree('EP', [Tree('Event', ['ev_exists']), tree])
+    return tree
+
+
 def fix_root_system(tree):  # Function to only make one node the S node and the sub nodes the S_sub
     for node in tree.treepositions('postorder'):
         if len(node) > 0 and isinstance(tree[node], nltk.Tree) and tree[node].label() == 'S':
@@ -306,10 +317,11 @@ def quantifier_possibilities(tree=nltk.Tree, by='DP'):  # Calculate all possible
 
 
 def show_all_formulas(tree):
+    tree = create_event_tree(tree)
     for possibility in quantifier_possibilities(tree):
         possibility.pretty_print()
         # print(translate_to_logic(possibility)[()].formula)
-        print(translate_to_logic2(possibility))
+        print(translate_to_logic2(possibility, use_events=True))
 
 
 for t in trees:
