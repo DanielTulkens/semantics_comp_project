@@ -59,7 +59,7 @@ vocabulary = {
     ),
     'Role': (
         'agent',
-        'patient',
+        'patient'
     ),
     'Event': (
         'ev_exists',

@@ -5,7 +5,7 @@ import re
 
 import lexicon
 
-formalizations = lexicon.event_lexicon
+formalizations = lexicon.extensional_lexicon
 grammar = nltk.CFG.fromstring(lexicon.extensional_grammar)
 
 parser = nltk.parse.BottomUpLeftCornerChartParser(grammar)
@@ -82,43 +82,27 @@ def get_quantifier_DP_positions(tree):
     return DPs
 
 
-def print_tree_data(tree):
-    tree.pretty_print()
-    print('verb position: ', get_verb_position(tree))
-    print('subject position: ', get_subject_position(tree))
-    print('object position: ', get_object_position(tree))
-    print('quantifier DPs: ', get_quantifier_DP_positions(tree))
-
-
-for t in trees:
-    print_tree_data(t)
-
-existentials = ['a', 'some', 'an']
-universal = ['every']
-
-
 def check_quantified_children(tree, node):
     quantified = get_quantifier_DP_positions(tree)
     return (tree[node + (1,)] in quantified) or (tree[node + (0,)] in quantified)
 
 
-def formalize_single_node(node, translations):
+def formalize_single_node(node, logic_forms):
     if isinstance(node, nltk.Tree):
         if not node[:-1]:  # that is, if there is only one child node
-            return formalize_single_node(node[0], translations)
-        right_node = formalize_single_node(node[1], translations)
+            return formalize_single_node(node[0], logic_forms)
+        right_node = formalize_single_node(node[1], logic_forms)
         if right_node.type == 't':
             trace_name = node[0].label().replace('DP', 't')
-            return right_node.remove_traces(trace_name).application(formalize_single_node(node[0], translations))
+            return right_node.remove_traces(trace_name).application(formalize_single_node(node[0], logic_forms))
         else:
-            return formalize_single_node(node[0], translations).application(formalize_single_node(node[1], translations))
+            return formalize_single_node(node[0], logic_forms).application(formalize_single_node(node[1], logic_forms))
     elif re.match(r"t\d+", node):  # if it is a trace
         return lexicon.formalizations['PropN'](node)
     elif re.match(r"_+", node):  # if it is a variable
-        print('found var')
         return lexicon.formalizations['Var'](node.strip('_'))
     else:
-        return translations[node]
+        return logic_forms[node]
 
 
 def translate_to_logic(tree=nltk.Tree, use_events=False):
@@ -137,7 +121,8 @@ def create_event_tree(base_tree):
     tree = base_tree.copy()
     subj_pos = get_subject_position(tree)
     tree[subj_pos] = Tree('ThetaP', [Tree('Role', ['agent']), tree[subj_pos]])
-    if obj_pos := get_object_position(tree):
+    if get_object_position(tree):
+        obj_pos = get_object_position(tree)
         tree[obj_pos] = Tree('ThetaP', [Tree('Role', ['patient']), tree[obj_pos]])
     tree = Tree('EP', [Tree('Event', ['ev_exists']), tree])
     return tree
@@ -171,15 +156,22 @@ def fix_root_system(tree):  # Function to only make one node the S node and the 
     return tree
 
 
-def raise_node(tree=nltk.Tree, n_pos=tuple, replacement_='', new_label=''):  # Raise a node to the top of the tree
+def raise_node(tree: nltk.Tree, n_pos, replacement_='', new_label=''):  # Raise a node to the top of the tree
     tree = tree.copy(deep=True)
     dp_pos = nltk.Tree(new_label, [n for n in tree[n_pos]])
     tree[n_pos] = replacement_
     return nltk.Tree('S', [dp_pos, tree])
 
 
-def quantifier_possibilities(tree=nltk.Tree, by='DP'):  # Calculate all possible trees for translate_to_logic()
-    quantifiers = [node for node in tree.treepositions(order='postorder') if isinstance(tree[node], nltk.Tree) and sum([1 if x in existentials + universal else 0 for x in tree[node].leaves()]) > 0 and tree[node].label() == by]
+existentials = ['a', 'some', 'an']
+universal = ['every']
+
+
+def quantifier_possibilities(tree: nltk.Tree, by='DP'):  # Calculate all possible trees for translate_to_logic()
+    quantifiers = [node for node in tree.treepositions(order='postorder') if isinstance(tree[node], nltk.Tree) and sum(
+        [1 if x in existentials + universal else 0 for x in tree[node].leaves()]) > 0 and tree[node].label() == by]
+
+    print(quantifiers)
     possibilities = []
     for possibility in permutations(quantifiers, len(quantifiers)):
         new_tree = tree.copy(deep=True)
@@ -192,15 +184,21 @@ def quantifier_possibilities(tree=nltk.Tree, by='DP'):  # Calculate all possible
     return possibilities
 
 
-def show_all_formulas(tree):
+def print_tree_data(tree):
+    tree.pretty_print()
+    print('verb position: ', get_verb_position(tree))
+    print('subject position: ', get_subject_position(tree))
+    print('object position: ', get_object_position(tree))
+    print('quantifier DPs: ', get_quantifier_DP_positions(tree))
     tree = name_quantifier_variables(tree)
-    tree = create_event_tree(tree)
+    # event_tree = create_event_tree(tree)
     for possibility in quantifier_possibilities(tree):
         possibility.pretty_print()
-        # print(translate_to_logic(possibility)[()].formula)
-        print(translate_to_logic(possibility, use_events=True))
+        print(translate_to_logic(possibility))
+    # for possibility in quantifier_possibilities(event_tree):
+    #     possibility.pretty_print()
+    #     print(translate_to_logic(possibility, use_events=True))
 
 
 for t in trees:
-    # print(translate_to_logic2(t))
-    show_all_formulas(t)
+    print_tree_data(t)
