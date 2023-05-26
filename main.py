@@ -214,15 +214,18 @@ def quantifier_logic(tree=nltk.Tree):
 
 def formalize_single_node(node):
     if isinstance(node, nltk.Tree):
-        if node[:-1]:  # that is, if there are multiple direct children
-            result = formalize_single_node(node[0]).application(formalize_single_node(node[1]))
+        if not node[:-1]:  # that is, if there is only one child node
+            return formalize_single_node(node[0])
+        right_node = formalize_single_node(node[1])
+        if right_node.type == 't':
+            trace_name = node[0].label().replace('DP', 't')
+            return right_node.remove_traces(trace_name).application(formalize_single_node(node[0]))
         else:
-            result = formalize_single_node(node[0])
+            return formalize_single_node(node[0]).application(formalize_single_node(node[1]))
     elif re.match(r"t\d+", node):  # if it is a trace
-        result = lexicon.formalizations['PropN'](node)
+        return lexicon.formalizations['PropN'](node)
     else:
-        result = formalizations[node]
-    return result
+        return formalizations[node]
 
 
 def translate_to_logic2(tree=nltk.Tree):
