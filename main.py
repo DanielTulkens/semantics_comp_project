@@ -214,45 +214,41 @@ def quantifier_logic(tree=nltk.Tree):
 
 def translate_to_logic(tree=nltk.Tree):
     result = {}
-    prev_was_leave = False
+    prev_was_leaf = False
     leaf = ''
     root_cause = None
     for node in tree.treepositions(order='postorder'):
-        if isinstance(tree[node], nltk.Tree):
-            if len(tree[node]) > 1:
-                if tree[node].label() == 'S':
-                    if check_quantified_children(tree, node):
-                        result[node] = result[node + (0,)].application(result[node + (1,)])
-                    else:
-                        result[node] = result[node + (1,)].application(result[node + (0,)])
-                else:
-                    if not isinstance(tree[node + (0,)], nltk.Tree):  # If a t is in zero position apply flipped
-                        if re.match(r't\d+', tree[node + (0,)]):
-                            result[node] = result[node + (1,)].application(result[node + (0,)])
-                    else:
-                        result[node] = result[node + (0,)].application(result[node + (1,)])
-                    if tree[node].label() == 'VP' and check_quantified_children(tree, node):
-                        return None
-            else:
-                if prev_was_leave:
-                    result[node] = formalizations[tree[node].label()][leaf]
-                    root_cause = result[node]
-                    prev_was_leave = False
-                elif not re.match(r"t\d+", leaf):
-                    result[node] = root_cause
-        else:
-            prev_was_leave = True
+        if not isinstance(tree[node], nltk.Tree):
+            prev_was_leaf = True
             leaf = tree[node]
             if re.match(r"t\d+", leaf):
                 result[node] = lexicon.formalizations['PropN'](leaf)
+        elif len(tree[node]) > 1:
+            if tree[node].label() == 'S':
+                result[node] = result[node + (0,)].application(result[node + (1,)])
+            else:
+                if not isinstance(tree[node + (0,)], nltk.Tree):  # If a t is in zero position apply flipped
+                    if re.match(r't\d+', tree[node + (0,)]):
+                        result[node] = result[node + (1,)].application(result[node + (0,)])
+                else:
+                    result[node] = result[node + (0,)].application(result[node + (1,)])
+                if tree[node].label() == 'VP' and check_quantified_children(tree, node):
+                    return None
+        else:
+            if prev_was_leaf:
+                result[node] = formalizations[leaf]
+                root_cause = result[node]
+                prev_was_leaf = False
+            elif not re.match(r"t\d+", leaf):
+                result[node] = root_cause
+
     return result
 
 
 def fix_root_system(tree):  # Function to only make one node the S node and the sub nodes the S_sub
     for node in tree.treepositions('postorder'):
-        if len(node) > 0 and isinstance(tree[node], nltk.Tree):
-            if tree[node].label() == 'S':
-                tree[node] = nltk.Tree('SUB_S', [n for n in tree[node]])
+        if len(node) > 0 and isinstance(tree[node], nltk.Tree) and tree[node].label() == 'S':
+            tree[node] = nltk.Tree('SUB_S', [n for n in tree[node]])
     return tree
 
 

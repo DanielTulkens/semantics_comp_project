@@ -8,7 +8,7 @@ vocabulary = {
         'on',
         'to',
         'without',
-        'from'
+        'from',
     ),
     'N': (
         'boy',
@@ -16,30 +16,30 @@ vocabulary = {
         'girl',
         'class',
         'book',
-        'teacher'
+        'teacher',
     ),
     'PropN': (
         'john',
-        'mary'
+        'mary',
     ),
     'Vi': (
         'walks',
-        'passed'
+        'passed',
     ),
     'Vt': (
         'sees',
-        'teaches'
+        'teaches',
     ),
     'Vpro': (
-        'think'
+        'think',
     ),
     'Adj': (
         'eager',
-        'smart'
+        'smart',
     ),
     'Adv': (
         'eagerly',
-        'well'
+        'well',
     ),
     'Det': {
         'existential': (
@@ -49,20 +49,20 @@ vocabulary = {
             'some'),
         'universal': (
             'every',
-            'any'
+            'any',
         )
     },
     'Conj': (
         'and',
         'or',
-        'but'
+        'but',
     ),
     'Role': (
         'agent',
-        'patient'
+        'patient',
     ),
     'Event': (
-        'ev_exists'
+        'ev_exists',
     )
 }
 
@@ -346,21 +346,26 @@ def generate_lexicon(vocab, translations):
     lexicon = {}
     for part_of_speech, entries in vocab.items():
         if part_of_speech in translations.keys():
-            lexicon.update({part_of_speech: {word: translations[part_of_speech](word) for word in entries}})
+            lexicon.update({word: translations[part_of_speech](word) for word in entries})
         elif type(entries) == dict:
-            lexicon[part_of_speech] = {}
             for subtype, words in entries.items():
-                lexicon[part_of_speech].update({word: translations[subtype](word) for word in words})
+                lexicon.update({word: translations[subtype](word) for word in words})
         else:
             lexicon.update({part_of_speech: {word: Formalization(word, 'e') for word in entries}})
     return lexicon
 
 
 # generate entries for terminal symbol rules for use in grammar based on a lexicon as created by generate_lexicon
-def lexicon_to_terminals(lexicon):
+def vocabulary_to_terminals(vocab):
     terminal_rules = ''
-    for part_of_speech in lexicon.keys():
-        terminals_string = " | ".join(["'" + word + "'" for word in lexicon[part_of_speech].keys()])
+    for part_of_speech in vocab.keys():
+        if type(vocab[part_of_speech]) == dict:
+            words = ()
+            for sublist in vocab[part_of_speech].values():
+                words += tuple(word for word in sublist)
+        else:
+            words = vocab[part_of_speech]
+        terminals_string = " | ".join(["'" + word + "'" for word in words])
         terminal_rules += (part_of_speech + ' -> ' + terminals_string + '\n\t')
     return terminal_rules
 
@@ -378,7 +383,7 @@ extensional_grammar = f"""
     AdvP -> Adv P
     PP -> P DP
     
-    {lexicon_to_terminals(extensional_lexicon)}
+    {vocabulary_to_terminals(vocabulary)}
 """
 
 event_grammar = f"""
@@ -391,11 +396,11 @@ event_grammar = f"""
     AdvP -> Adv P
     PP -> P DP
     
-    {lexicon_to_terminals(event_lexicon)}
+    {vocabulary_to_terminals(vocabulary)}
 """
-# # for testing purposes
-# print(extensional_lexicon)
-# print(extensional_grammar)
+# for testing purposes
+print(extensional_lexicon)
+print(extensional_grammar)
 
 # result = extensional_lexicon['Det']['every'].application(
 #     extensional_lexicon['N']['student']
