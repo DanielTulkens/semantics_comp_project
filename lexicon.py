@@ -222,31 +222,37 @@ formalizations = {
         'P',
         f'<lambda y: <lambda x: {preposition.upper()}(_x_, _y_)>>'
     ),
-    'existential': lambda _: Formalization(
-        lambda P: lambda Q: f'Exists x[{P("x")} ^ {Q("x")}]',
-        (('e', 't'), (('e', 't'), 't')),
-        'existential',
-        '<lambda P: <lambda Q: Exists x[_P_(x) ^ _Q_(x)]>>'
-    ),
-    'universal': lambda _: Formalization(
-        lambda P: lambda Q: f'All x[{P("x")} -> {Q("x")}]',
-        (('e', 't'), (('e', 't'), 't')),
-        'universal',
-        '<lambda P: <lambda Q: All x[_P_(x) -> _Q_(x)]>>'
-    ),
-    # alternative entry for quantifiers where they can use variables represented by other things than x
     # 'existential': lambda _: Formalization(
-    #     lambda v: lambda P: lambda Q: f'Exists {v}[{P({v})} ^ {Q({v})}]',
+    #     lambda P: lambda Q: f'Exists x[{P("x")} ^ {Q("x")}]',
     #     (('e', 't'), (('e', 't'), 't')),
     #     'existential',
-    #     '<lambda v : <lambda P: <lambda Q: Exists v[_P_(v) ^ _Q_(v)]>>>'
+    #     '<lambda P: <lambda Q: Exists x[_P_(x) ^ _Q_(x)]>>'
     # ),
     # 'universal': lambda _: Formalization(
-    #     lambda v: lambda P: lambda Q: f'All {v}[{P({v})} -> {Q({v})}]',
+    #     lambda P: lambda Q: f'All x[{P("x")} -> {Q("x")}]',
     #     (('e', 't'), (('e', 't'), 't')),
     #     'universal',
-    #     '<lambda v : <lambda P: <lambda Q: All v[_P_(v) -> _Q_(v)]>>>'
-    # )
+    #     '<lambda P: <lambda Q: All x[_P_(x) -> _Q_(x)]>>'
+    # ),
+    # alternative entry for quantifiers where they can use variables represented by other things than x
+    'existential': lambda _: Formalization(
+        lambda v: lambda P: lambda Q: f'Exists {v}[{P(v)} ^ {Q(v)}]',
+        ('v', (('e', 't'), (('e', 't'), 't'))),
+        'existential',
+        '<lambda v : <lambda P: <lambda Q: Exists _v_[_P_(_v_) ^ _Q_(_v_)]>>>'
+    ),
+    'universal': lambda _: Formalization(
+        lambda v: lambda P: lambda Q: f'All {v}[{P(v)} -> {Q(v)}]',
+        ('v', (('e', 't'), (('e', 't'), 't'))),
+        'universal',
+        '<lambda v : <lambda P: <lambda Q: All _v_[_P_(_v_) -> _Q_(_v_)]>>>'
+    ),
+    'Var': lambda name: Formalization(
+        name,
+        'v',
+        'Var',
+        name,
+    ),
 }
 
 formalizations_events = formalizations.copy()

@@ -114,6 +114,9 @@ def formalize_single_node(node, translations):
             return formalize_single_node(node[0], translations).application(formalize_single_node(node[1], translations))
     elif re.match(r"t\d+", node):  # if it is a trace
         return lexicon.formalizations['PropN'](node)
+    elif re.match(r"_+", node):  # if it is a variable
+        print('found var')
+        return lexicon.formalizations['Var'](node.strip('_'))
     else:
         return translations[node]
 
@@ -137,6 +140,27 @@ def create_event_tree(base_tree):
     if obj_pos := get_object_position(tree):
         tree[obj_pos] = Tree('ThetaP', [Tree('Role', ['patient']), tree[obj_pos]])
     tree = Tree('EP', [Tree('Event', ['ev_exists']), tree])
+    return tree
+
+
+def variable_generator():
+    var_letters = ('x', 'y', 'z')
+    n = 0
+    while n < 3:
+        yield '_' + var_letters[n % 3]
+        n += 1
+    while True:
+        yield '_' + var_letters[n % 3] + str(n//3)
+        n += 1
+
+
+def name_quantifier_variables(tree):
+    tree = tree.copy()
+    var_names = variable_generator()
+    to_replace = [node + (0,) for node in get_quantifier_DP_positions(tree)]
+    for node in to_replace:
+        new = next(var_names)
+        tree[node] = Tree('Det', [Tree('Var', [new]), tree[node]])
     return tree
 
 
@@ -169,6 +193,7 @@ def quantifier_possibilities(tree=nltk.Tree, by='DP'):  # Calculate all possible
 
 
 def show_all_formulas(tree):
+    tree = name_quantifier_variables(tree)
     tree = create_event_tree(tree)
     for possibility in quantifier_possibilities(tree):
         possibility.pretty_print()
